@@ -5,5 +5,6 @@ Centralised Blockchain with Redis Enterprise.
 • WIP
 
 Example:
+<a href="https://ibb.co/gv6M3DQ"><img src="https://i.ibb.co/jVHvTLq/bc-transact-example.png" alt="bc-transact-example" border="0"></a>
 
-![](https://ibb.co/gv6M3DQ?raw=true "BC Example")
+![](https://i.ibb.co/jVHvTLq/bc-transact-example.png "BC Example")
