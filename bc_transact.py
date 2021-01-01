@@ -2,13 +2,13 @@ from passlib.hash import argon2
 from random import randint
 import random
 import redis
-import base64
 import time
 
 def intialise():
     try:
         global r
         r = redis.StrictRedis(
+            #enter your Redis credentials
             host=ghost, port=gport, password=gdb, db=0, decode_responses=True
         )
         # enter/get/set transfer amount
@@ -34,28 +34,13 @@ def intialise():
         print(e)
         
 def main():
-    host_message = (
-        "cmVkaXMtMTQ3MjYuYzg0LnVzLWVhc3QtMS0yLmVjMi5jbG91ZC5yZWRpc2xhYnMuY29t"
-    )
-    host_bytes = host_message.encode("ascii")
-    hostm_bytes = base64.b64decode(host_bytes)
-    global ghost
-    ghost = hostm_bytes.decode("ascii")
-    port_message = "MTQ3MjY="
-    port_bytes = port_message.encode("ascii")
-    portm_bytes = base64.b64decode(port_bytes)
-    global gport
-    gport = portm_bytes.decode("ascii")
-    db_message = "WjByRnZ0OEwzdVBUMTV3eFBGQndDY1NCaW9KT25BcVU="
-    db_bytes = db_message.encode("ascii")
-    dbm_bytes = base64.b64decode(db_bytes)
-    global gdb
-    gdb = dbm_bytes.decode("ascii")
+    # Initialise something else, maybe even connection variables
     intialise()  
 
 def run_check(trans_amount, trans_type):
     # start the timer
     start = time.time()
+    # if exists genesis block or others
     if r.exists('prev_synch'):
         prev_synch = r.get('prev_synch')
         prev_hash = r.lindex('synched_list', 0)
@@ -68,7 +53,8 @@ def run_check(trans_amount, trans_type):
             'trans_hash': now_hash,
             'trans_prev_hash': prev_hash,
             'trans_prev_synch': prev_synch
-            }  
+            }
+         # send to redis via pipeline, let's newk it
         newk = r.pipeline()
         newk.hset(now_hash, 'none', 'none', data_bundle).set('prev_synch', time.ctime()).lpush('synched_list', now_hash).execute()
     else:
@@ -81,26 +67,31 @@ def run_check(trans_amount, trans_type):
             'trans_type': 'Genesis_Block',
             'trans_ctime': time.ctime()
         }
+        # send to redis via pipeline, let's newk it
         newk = r.pipeline()
         newk.set('prev_synch', time.ctime()).hset('Genesis_Block', 'none', 'none', data_bundle).lpush('synched_list', 'Genesis_Block').execute()       
     check = 0             
     while check != 1:
-        # verify hashes and validate previous synch instances.
+        # verify hashes and validate previous synch instances. Print out saved dictionary (no need to strain the redis when we have already verified and validated)
+        # Yeah baby, we have a success validation
         if (argon2.verify(prev_hash, now_hash)) and prev_synch == r.hget(now_hash, 'trans_prev_synch'):
             check = 1            
             print('* Blockchain Synchronised in:', round(time.time() - start, 3), 'seconds.')
             print('* Transactions:', r.llen('synched_list'))
             print('\n* Transaction Data Added:\n')
             for key, value in data_bundle.items():
-                print('* ', key, '->', value)            
+                print('* ', key, '->', value)
+                # do something imporant, such as process a real transaction called from another function.
         else:
             check = 1
             if r.exists('synched_list'):
+                # initial synch aka Genesis block
                 print('* Initial Synch which took', round(time.time() - start, 3), 'seconds.')
                 print('\n* Transaction Data Added:\n')
             for key, value in data_bundle.items():
                 print('* ', key, '->', value) 
             else:
+                # failed synch
                 print('* Unsuccessful Synch which took', round(time.time() - start, 3), 'seconds.')
                              
                              
